@@ -1,0 +1,392 @@
+const stripe = require("stripe")("sk_test_N77Y1NnYyGeXc5izKzPgmrnT009hXTKwd4");
+const service = require('./paymentControllerService')
+const bodyParser = require('body-parser');
+
+module.exports = (app, paymentSchema, customeSchema) => {
+
+    app.get('/checkCustomerExists', (req, res) => {
+        var s = new service(customeSchema, res)
+        s.checkCustomerExists({ profileID: req.query.id })
+    })
+
+    app.get('/createCustomer', (req, res) => {
+        var s = new service(customeSchema, res)
+        s.createCustomer({ profileID: req.query.id })
+    })
+
+    app.post('/createCard', (req, res) => {
+        var s = new service(customeSchema, res)
+        console.log(req.body);
+
+        s.createCardToken(req.body)
+    })
+
+    app.post('/linkCardToken', (req, res) => {
+        var s = new service(customeSchema, res)
+        s.linkCard({ profileID: req.body.id, cardToken: req.body.cardToken })
+    })
+
+    app.get('/linkPaymentMethodToCustomer', (req, res) => {
+            var s = new service(customeSchema, res)
+            s._linkPaymentMethodTocustomer(paymentSchema, req.query.id)
+        })
+        // app.post('/createCardAndLinkToCustomer', (req, res) => {
+        //     var s = new service(customeSchema, res)
+        //     s.createCustomer({ profileID: req.query.id })
+        //     var s = new service(customeSchema, res)
+        //     s.linkCard({ profileID: req.body.id, cardToken: req.body.cardToken })
+        // })
+
+    // app.get('/c', (req, res) => {
+    //     var s = new service(customeSchema, res)
+    //     s.createCustomer({ profileID: '123456' })
+    // })
+
+    app.get('/initiatePayment', (req, res) => {
+        var s = new service(paymentSchema, res)
+        s._inititatePayment({ amount: 200 })
+    })
+
+
+    app.post('/linkPayToken', (req, res) => {
+        var s = new service(paymentSchema, res)
+        s.createPaymentMethodforTranscation(req.body.cardToken, req.body.id)
+    })
+    app.get('/makePayment', (req, res) => {
+        var s = new service(paymentSchema, res)
+        s.makePayment(req.query.id)
+    })
+
+    app.post('/paymentHook', bodyParser.raw({ type: 'application/json' }), (request, response) => {
+        console.log('***********************in payment hook ');
+
+        let event;
+
+        try {
+            event = JSON.parse(request.body);
+        } catch (err) {
+            console.log(err);
+
+            response.status(400).send(`Webhook Error: ${err.message}`);
+        }
+
+        // Handle the event
+        switch (event.type) {
+            case 'payment_intent.succeeded':
+                const paymentIntent = event.data.object;
+                console.log("e");
+
+                console.log(paymentIntent);
+
+                var s = new service(paymentSchema, response)
+                s.confirmPayment(paymentIntent)
+                break;
+                // case 'payment_method.attached':
+                //     const paymentMethod = event.data.object;
+                //     console.log(paymentMethod)
+                //     break;
+                // default:
+                return response.status(400).end();
+        }
+
+        // Return a response to acknowledge receipt of the event
+        // response.json({ received: true });
+    });
+
+    app.post('/charges', (req, res) => {
+        console.log(req.body);
+        var profileId = req.body.profileId
+        var amount = req.body.amount
+        var currencyCode = req.body.currency
+        var sourceId = req.body.source
+
+        var payment = new paymentSchema();
+        // create a customer 
+        stripe.customers.create({
+            profileId: req.body.profileId, // customer email, which user need to enter while making payment
+            sourceId: req.body.sourceId // token for the given card 
+        }).then(customers =>
+            stripe.charges.create({
+                    amount: req.body.amount,
+                    currency: req.body.currency,
+                    receipt_email: req.body.receipt_email,
+                    source: sourceId,
+                },
+
+                function(err, charge) {
+                    if (err) {
+                        payment.profileId = profileId
+                        payment.transcationId = ''
+                        payment.amount = amount
+                        payment.status = 'success'
+                        payment.payeeId = ''
+                        payment.payee_profileId = ''
+                        payment.payerId = ''
+                        payment.mode = ''
+                        payment.type = ''
+                        payment.currency = currencyCode
+                        payment.customerID = ''
+                        payment.paymentTranscationId = ''
+                        payment.description = err.code + '' + err.message
+                        payment.time = new Date().getTime()
+                        payment.payment_receipt_url = ''
+                        payment.country = ''
+                        payment.sourceId = sourceId
+                    } else {
+                        payment.profileId = profileId
+                        payment.transcationId = ''
+                        payment.amount = charge.amount
+                        payment.status = charge.status
+                        payment.payeeId = ''
+                        payment.payee_profileId = ''
+                        payment.payerId = ''
+                        payment.mode = charge.type
+                        payment.type = charge.payment_method_details.card.brand
+                        payment.currency = charge.currency
+                        payment.customerID = ''
+                        payment.paymentTranscationId = charge.id
+                        payment.description = charge.description
+                        payment.time = new Date().getTime()
+                        payment.payment_receipt_url = charge.receipt_url
+                        payment.country = ''
+                        payment.lastFour = charge.last4
+                        payment.sourceId = sourceId
+                    }
+                    payment.save().then((data) => {
+                        res.send({
+                            data: err ? err : charge,
+                            status: 'success'
+                        })
+                    }).catch((err) => {
+                        console.log(err);
+                        res.send({ error: err })
+                    })
+                }))
+    })
+
+    app.post('/createCard', (req, res) => {
+        var profileID = req.body.profileID
+        var sourceID = req.body.sourceID
+        console.log(profileID);
+        console.log(req.body);
+
+        customeSchema.find({ profile_id: profileID }).then((data) => {
+            if (data.length < 1) {
+                var customer_Schema = new customeSchema()
+                customer_Schema.profile_id = profileID
+                stripe.customers.create({
+                    name: profileID, // change to name
+                    source: sourceID
+                        // mail: profileMail --create one
+                }, function(err, customer) {
+                    console.log(!err);
+                    console.log(customer);
+                    if (!err) {
+                        customer_Schema.customer_id = customer.id
+                        customer_Schema.save(function(err, d) {
+                            if (!err) {
+                                console.log('here');
+                                res.send({ status: 'csavd', data: customer, customer: d })
+                            } else {
+                                console.log('hereErr');
+                                res.send({ status: 'err', data: err })
+                            }
+                        })
+                    } else {
+                        res.send({ status: 'fail', data: err })
+                    }
+                });
+                // stripe.customers.createSource(
+                //     'cus_FWwh2PRHrv4V2q', {
+                //         source: 'tok_1F1t5XEfb2aQ6137Y58rdakJ',
+                //     },
+                //     function(err, card) {
+                //         // asynchronously called
+                //         console.log(card);
+
+                //     }
+                // )
+                // customer_Schema
+            } else {
+                stripe.customers.createSource(
+                    data[0].customer_id, {
+                        source: sourceID,
+                    },
+                    function(err, card) {
+                        if (!err) {
+                            res.send({ status: 'updated', customer: data[0], data: card })
+                        } else {
+                            res.send({ status: 'error', data: err })
+                        }
+                    }
+                );
+            }
+        }).catch(error => {
+            res.send({ status: 'error', error: error })
+        })
+    })
+
+    app.post('/listCards', (req, res) => {
+        var profileID = req.body.profileID
+        console.log(profileID);
+
+        customeSchema.find({ profile_id: profileID }).then(data => {
+            if (data.length > 0) {
+                stripe.customers.listSources(
+                    data[0].customer_id, {
+                        limit: 3,
+                        object: 'card',
+                    },
+                    function(err, cards) {
+                        // asynchronously called
+                        if (!err) {
+                            res.send({ status: 'success', data: cards })
+                        }
+                    });
+            } else {
+                res.send({ status: 'fail', data: 'customer not registered for payments' })
+            }
+        })
+
+    })
+
+    app.post('/createCustomer')
+}
+
+
+// datenow
+// id {sender receiver}
+// stripe tran id - access the tran
+
+// stripe.customers.update(
+// 'cus_FWuSpFs6fyMrh2',
+// {metadata: {order_id: '6735'}},
+// function(err, customer) {
+// // asynchronously called
+// }
+// );
+
+//     stripe.setupIntents.create({
+//         payment_method_types: ['card'],
+//         customer:'cus_FWwh2PRHrv4V2q'
+//     }, function(err, setupIntent) {
+//         // asynchronously called
+//         console.log(setupIntent);
+//     });    
+// })
+
+//     stripe.charges.list(
+//         { limit: 3 },
+//         {customer:'null'},
+//         function(err, charges) {
+//         // asynchronously called
+//         console.log(charges);
+//     }
+// );
+// });
+
+// stripe.customers.update(
+//   'cus_FWuSpFs6fyMrh2',
+//   {metadata: {order_id: '6735'}},
+//     function(err, customer) {
+//     // asynchronously called
+//   }
+// );
+
+// stripe.customers.createSource(
+//   'cus_FWwh2PRHrv4V2q',
+//   {
+//     source: 'tok_1F1t5XEfb2aQ6137Y58rdakJ',
+//   },
+//   function(err, card) {
+//     // asynchronously called
+//     console.log(card);
+
+//   }
+// );
+
+
+// stripe.charges.retrieve(
+//   "ch_1F1rJJEfb2aQ6137kvGNedz5",
+//   function(err, charge) {
+//     // asynchronously called
+//     console.log(charge);
+
+//   }
+// );
+
+
+// stripe.customers.retrieveSource(
+//   "cus_FWwh2PRHrv4V2q",
+//   "card_1F1soAEfb2aQ61371v0XHfrO",
+//   function(err, card) {
+//   // asynchronously called
+
+//   console.log(card);
+
+// }
+// )
+
+// stripe.customers.list(
+//   { limit: 3 },
+//   function(err, customers) {
+//     // asynchronously called
+//     console.log(customers.data[0].sources);
+
+//   }
+// );
+
+// stripe.paymentIntents.create({
+//   payment_method_types: ['card'],
+//   amount: 20000,
+//   currency: 'inr',
+//   application_fee_amount: 123,
+// }, {
+//   stripe_account: '{{CONNECTED_STRIPE_ACCOUNT_ID}}',
+// }).then(function(paymentIntent) {
+//   // asynchronously called
+// });
+
+// stripe.paymentIntents.create({
+//   amount: 2000,
+//   currency: 'hkd',
+//   payment_method_types: ['card'],
+// }, function(err, paymentIntent) {
+//   // asynchronously called
+//   console.log(paymentIntent);
+
+// });
+
+// stripe.charges.list(
+//   // { limit: 3 },
+//   {customer:'cus_FWwh2PRHrv4V2q',
+// status:'failed'},
+//   function(err, charges) {
+//     // asynchronously called
+//     console.log(charges);
+//   }
+// );
+
+// stripe.setupIntents.create({
+//   payment_method_types: ['card'],
+//   customer:'cus_FWwh2PRHrv4V2q'
+// }, function(err, setupIntent) {
+//   // asynchronously called
+//   console.log(setupIntent);
+
+// });
+
+
+
+
+
+// stripe.customers.listSources(
+//   'cus_FWwh2PRHrv4V2q',
+//   {
+//     // limit: 3,
+//     object: 'card',
+//   },
+//   function(err, cards) {
+//   // asynchronously called
+//   console.log(cards);
+// });
