@@ -24,27 +24,31 @@ module.exports = (app, profileDataModel, locationModel, preferencesModel, apiRes
             })
         } catch (error) {
             apiResponse.reportError(error)
-            return res.status(500).json(apiResponse.sendReply(0, 'Listing Get Details Error Occured'));
+            return res.status(500).json(apiResponse.sendReply(0, 'Validation Error Occured while Listing Get Details '));
         }
     })
 
-    app.post('/updateProfileTypes', (req, res) => {
-        console.log(req.body);
-
-        let profileID = req.body.profileID
-        let profileTypes = req.body.profileTypes
-        profileDataModel.findOneAndUpdate({ profileID: profileID }, { profileType: profileTypes }).then((data) => {
-            return res.status(200).json(apiResponse.sendReply(1, 'update successfull', {}));
-        }).catch(error => {
+    app.post('/updateProfileTypes', createProfileValidations.updateProfiles(), (req, res) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(412).json(apiResponse.sendReply(0, 'validation error'));
+            }
+            console.log(req.body);
+            let profileID = req.body.profileID
+            let profileTypes = req.body.profileTypes
+            profileDataModel.findOneAndUpdate({ profileID: profileID }, { profileType: profileTypes }).then((data) => {
+                return res.status(200).json(apiResponse.sendReply(1, 'update successfull', {}));
+            })
+        } catch (error) {
             console.log(error);
-
-            return res.status(500).json(apiResponse.sendReply(0, 'error in updating data'));
-        })
-
+            apiResponse.reportError(error)
+            return res.status(500).json(apiResponse.sendReply(0, 'Validation error in updating data'));
+        }
     })
 
 
-    app.post('/createprofile', (req, res) => {
+    app.post('/createprofile', createProfileValidations.insertProfile(), (req, res) => {
         let profileData = new profileDataModel()
         let locationData = new locationModel()
         let preferencesData = new preferencesModel()

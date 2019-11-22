@@ -6,31 +6,38 @@ const {
 let connectionValidations = {
 
 
-    connectionRequest: () => {
+    addConnections: () => {
         return [
             check('sender').exists(),
             check('owner').exists()
         ]
     },
 
-    getProfileConnection: () => {
+    removeConnections: () => {
+        return [
+            check('sender').exists(),
+            check('owner').exists()
+        ]
+    },
+
+    getProfileConnections: () => {
         return [
             check('mProfileID').exists(),
             check('profileID').exists()
         ]
     },
 
-    getUserAccess: () => {
+    changeUserStatus: () => {
         return [
-            check('sender').exists(),
-            check('owner').exists()
+            check('mProfileID').exists(),
+            check('profileID').exists()
         ]
     },
 
-
-    getOwnerConnections: () => {
+    userRequests: () => {
         return [
-            check('owner').exists(),
+            check('sender').exists(),
+            check('owner').exists()
         ]
     },
 
@@ -46,6 +53,16 @@ let connectionValidations = {
             check('profileID').exists()
         ]
     },
+
+    getOwnerConnections: () => {
+        return [
+            check('owner').exists(),
+        ]
+    },
+
+
+
+
 }
 
-module.exports = bookmarkValidations;
+module.exports = connectionValidations;

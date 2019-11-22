@@ -1,6 +1,13 @@
-module.exports = (app, apiResponse, keyStoreModel, statusModel) => {
-    app.post('/storekeys', (req, res) => {
+const keyStoreValidator = require('../validators/keyValidator')
+
+module.exports = (app, apiResponse, keyStoreModel, statusModel, validationResult) => {
+
+    app.post('/storekeys', keyStoreValidator.storeKeys(), (req, res) => {
         try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(412).json(apiResponse.sendReply(0, 'validation error'));
+            }
             console.log('*****************');
             data = req.body
             console.log(data);
@@ -23,13 +30,15 @@ module.exports = (app, apiResponse, keyStoreModel, statusModel) => {
         } catch (e) {
             console.log(e);
             apiResponse.reportError(e)
-            return res.status(500).send(apiResponse.sendReply(0, 'error', e))
+            return res.status(500).send(apiResponse.sendReply(0, 'validation error while storing keys', e))
         }
     })
+
     app.get('/getkeys', (req, res) => {
         try {
+
             console.log(req.headers)
-            keyStoreModel.findOne({ profileID: req.headers.profileid }, (err, data) => {
+            keyStoreModel.findOne({ profileID: req.headers.profileID }, (err, data) => {
                 if (err) {
                     return res.status(500).send(apiResponse.sendReply(0, 'error'))
                 } else {
@@ -45,15 +54,19 @@ module.exports = (app, apiResponse, keyStoreModel, statusModel) => {
         }
     })
 
-    app.get('/getPublicKey/:profileID', (req, res) => {
+    app.get('/getPublicKey/:profileID', keyStoreValidator.getProfileKeys(), (req, res) => {
         try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(412).json(apiResponse.sendReply(0, 'validation error'));
+            }
             keyStoreModel.findOne({ profileID: req.params.profileID }, { publicKey: true }).then(data => {
                 return res.status(200).send(apiResponse.sendReply(1, 'keys got', data))
             })
         } catch (e) {
             apiResponse.reportError(e)
             console.log(data);
-            return res.status(500).send(apiResponse.sendReply(0, 'error', e))
+            return res.status(500).send(apiResponse.sendReply(0, 'validation error while fetching keys', e))
         }
     })
 

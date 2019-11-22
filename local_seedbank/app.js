@@ -31,7 +31,7 @@ app.use('/public', express.static(path.join(__dirname + 'public')));
 
 // provinance
 var keyStoreModel = require('./models/keyStoreModel')
-var keyStoreController = require('./keyControllers/keyStroreController')
+var keyStoreController = require('./keyControllers/keyStoreController')
 
 var jwt = require('jsonwebtoken');
 const axios = require('axios');
@@ -54,7 +54,7 @@ const notify = require('./notificationControllers/sendNotification')
 
 // provenance
 var keyStoreModel = require('./models/keyStoreModel')
-var keyStoreController = require('./keyControllers/keyStroreController')
+var keyStoreController = require('./keyControllers/keyStoreController')
 
 
 
@@ -107,7 +107,7 @@ const profileFilterController = require('./profileController/filterController')
 const profileFunctionsController = require('./profileController/profileFunctions')
 var registerServiceController = require('./socketControllers/registerServiceController');
 
-registrationFuntions(app, userModel, profileDataModel, locationModel, preferencesModel, apiResponse)
+registrationFuntions(app, userModel, profileDataModel, locationModel, preferencesModel, apiResponse, validationResult)
 
 profileFunctionsController(app, profileDataModel, apiResponse, termsModel, listingModel, KYCModel, imagesModel, statusModel, preferencesModel, calendarModel, locationModel, typesModel, tailorTerms)
 createprofileController(app, profileDataModel, locationModel, preferencesModel, apiResponse, statusModel, validationResult);
@@ -119,8 +119,8 @@ copyrightListingController(app, copyrightListingModel, apiResponse, validationRe
 sellingListingController(app, sellingListingModel, apiResponse, validationResult);
 bookmarkController(app, bookmarkModel, apiResponse, validationResult)
 profileFilterController(app, profileDataModel, apiResponse)
-disputecontroller(app, disputeModel, profileDataModel, apiResponse)
-keyStoreController(app, apiResponse, keyStoreModel, statusModel)
+disputecontroller(app, disputeModel, profileDataModel, apiResponse, validationResult)
+keyStoreController(app, apiResponse, keyStoreModel, statusModel, validationResult)
 sessionTimerController(app, sessionTimerModel)
 
 

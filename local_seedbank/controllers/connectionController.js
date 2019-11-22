@@ -2,7 +2,7 @@ const connectionValidations = require('../validators/connectionController-valida
 
 module.exports = (app, profileDataModel, apiResponse, preferencesModel, validationResult) => {
 
-    app.get('/addconnection/:owner/:sender', connectionValidations.connectionRequest(), (req, res) => {
+    app.get('/addconnection/:owner/:sender', connectionValidations.addConnections(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -24,7 +24,7 @@ module.exports = (app, profileDataModel, apiResponse, preferencesModel, validati
         }
     })
 
-    app.get('/removeconnection/:owner/:sender', connectionValidations.connectionRequest(), (req, res) => {
+    app.get('/removeconnection/:owner/:sender', connectionValidations.removeConnections(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -47,7 +47,7 @@ module.exports = (app, profileDataModel, apiResponse, preferencesModel, validati
     })
 
 
-    app.get('/isFollowing/:profileID/:mProfileID', connectionValidations.getProfileConnection(), (req, res) => {
+    app.get('/isFollowing/:profileID/:mProfileID', connectionValidations.getProfileConnections(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -75,7 +75,7 @@ module.exports = (app, profileDataModel, apiResponse, preferencesModel, validati
         }
     })
 
-    app.get('/blockuser/:profileID/:mProfileID', connectionValidations.getProfileConnection(), (req, res) => {
+    app.get('/blockuser/:profileID/:mProfileID', connectionValidations.changeUserStatus(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -106,7 +106,7 @@ module.exports = (app, profileDataModel, apiResponse, preferencesModel, validati
         }
     })
 
-    app.get('/unblockuser/:profileID/:mProfileID', connectionValidations.getProfileConnection(), (req, res) => {
+    app.get('/unblockuser/:profileID/:mProfileID', connectionValidations.changeUserStatus(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -135,7 +135,7 @@ module.exports = (app, profileDataModel, apiResponse, preferencesModel, validati
     })
 
 
-    app.post('/sendconreq', connectionValidations.getUserAccess(), (req, res) => {
+    app.post('/sendconreq', connectionValidations.userRequests(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -162,7 +162,7 @@ module.exports = (app, profileDataModel, apiResponse, preferencesModel, validati
         }
     })
 
-    app.post('/rejectconreq', connectionValidations.getUserAccess(), (req, res) => {
+    app.post('/rejectconreq', connectionValidations.userRequests(), (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {

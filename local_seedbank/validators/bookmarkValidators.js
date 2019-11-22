@@ -9,7 +9,7 @@ let bookmarkValidations = {
         return [
             check('profileID').exists(),
             check('type').exists(),
-            check('bookmarkID').exists()
+            check('bookmarkID').exists(),
         ]
     },
 
@@ -22,7 +22,6 @@ let bookmarkValidations = {
     getMyBookmarks: () => {
         return [
             check('profileID').exists(),
-            // check('bookmarkID').exists()
         ]
     },
 
